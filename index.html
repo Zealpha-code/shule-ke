@@ -4,17 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Shule.ke - Find a School in Kenya</title>
-  <meta name="description" content="Find schools near you in Kenya. CBC and 8-4-4 schools, with direct WhatsApp contact.">
+  <meta name="description" content="Find schools near you in Kenya, with direct WhatsApp contact.">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
     .top { background: #16a34a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; }
-    .hero { padding: 28px 16px 8px; text-align: center; max-width: 700px; margin: auto; }
+    .wrap { max-width: 700px; margin: 0 auto; }
+    .hero { padding: 28px 16px 8px; text-align: center; }
     .hero h1 { margin: 0 0 8px; font-size: 26px; }
     .hero p { margin: 0; color: #555; }
-    h2 { max-width: 700px; margin: 24px auto 10px; padding: 0 16px; font-size: 19px; }
-    .slider { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 16px 16px; position: relative; scrollbar-width: none; }
+    h2 { margin: 24px 16px 10px; font-size: 19px; }
+    .slider { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 16px 16px; scrollbar-width: none; }
     .slider::-webkit-scrollbar { display: none; }
-    .slide { flex: 0 0 82%; max-width: 320px; scroll-snap-align: start; background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.12); text-decoration: none; color: inherit; box-sizing: border-box; display: block; }
+    .slide { flex: 0 0 78%; scroll-snap-align: start; background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.12); text-decoration: none; color: inherit; box-sizing: border-box; display: block; }
     .badge { width: 56px; height: 56px; border-radius: 14px; color: white; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
     .slide h3 { margin: 0 0 4px; font-size: 18px; }
     .town { color: #666; font-size: 14px; margin-bottom: 10px; }
@@ -28,17 +29,21 @@
 <body>
   <div class="top">Shule.ke</div>
 
-  <div class="hero">
-    <h1>Find the right school for your child</h1>
-    <p>Schools across Kenya, with direct contact to each one.</p>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Find the right school for your child</h1>
+      <p>Schools across Kenya, with direct contact to each one.</p>
+    </div>
+
+    <h2>Featured schools</h2>
+    <div class="slider" id="slider"></div>
+    <p class="note">More schools are being added. Swipe to see all.</p>
   </div>
 
-  <h2>Featured schools</h2>
-  <div class="slider" id="slider"></div>
-
-  <p class="note">More schools are being added. Swipe to see all.</p>
-
   <script>
+    // TEMPORARY: put YOUR WhatsApp number here, format 2547XXXXXXXX (no + or spaces)
+    var JOIN_NUMBER = "2547XXXXXXXX";
+
     var schools = [
       {
         name: "Sunrise Academy",
@@ -65,29 +70,37 @@
         '</a>';
     });
 
-    html += '<div class="slide invite">' +
+    var msg = encodeURIComponent("Hello Shule.ke, I would like my school to be listed.");
+    html += '<a class="slide invite" href="https://wa.me/' + JOIN_NUMBER + '?text=' + msg + '">' +
       '<div class="badge">+</div>' +
       '<h3>Your school here</h3>' +
       '<div class="town">Get a free page and let parents reach you on WhatsApp.</div>' +
-      '<div class="view">Message us to get listed</div>' +
-      '</div>';
+      '<div class="view">Message us to get listed &rarr;</div>' +
+      '</a>';
 
     slider.innerHTML = html;
 
-    // Auto-slide left to right, pauses while the user swipes
+    // Auto-slide: moves to the next card, returns to the first at the end
     var paused = false, resumeTimer;
     function step() {
       if (paused) return;
       var cards = slider.children;
-      var width = cards[0].offsetWidth + 14;
-      var current = Math.round(slider.scrollLeft / width);
-      var next = (current + 1) % cards.length;
-      slider.scrollTo({ left: next * width, behavior: "smooth" });
+      var start = cards[0].offsetLeft;
+      var current = 0, best = 1e9;
+      for (var i = 0; i < cards.length; i++) {
+        var d = Math.abs(cards[i].offsetLeft - start - slider.scrollLeft);
+        if (d < best) { best = d; current = i; }
+      }
+      var atEnd = slider.scrollLeft + slider.clientWidth >= slider.scrollWidth - 4;
+      var next = atEnd ? 0 : Math.min(current + 1, cards.length - 1);
+      slider.scrollTo({ left: cards[next].offsetLeft - start, behavior: "smooth" });
     }
     function pause() { paused = true; clearTimeout(resumeTimer); }
     function resume() { resumeTimer = setTimeout(function () { paused = false; }, 5000); }
     slider.addEventListener("touchstart", pause);
     slider.addEventListener("touchend", resume);
+    slider.addEventListener("mouseenter", pause);
+    slider.addEventListener("mouseleave", resume);
     setInterval(step, 3500);
   </script>
 </body>
