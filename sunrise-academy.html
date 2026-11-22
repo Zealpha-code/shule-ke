@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sunrise Academy, Kapenguria | Shule.ke</title>
-  <meta name="description" content="Sunrise Academy, Makutano, Kapenguria, West Pokot. CBC/CBE from ECD to upper primary.">
+  <title>School | Shule.ke</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
     .top { background: #16a34a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; }
+    .top a { color: white; text-decoration: none; }
     main { padding: 16px; max-width: 700px; margin: auto; }
     .hero { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-    .hero img { max-width: 260px; width: 80%; height: auto; }
-    h1 { margin: 12px 0 4px; font-size: 26px; }
+    .badge { width: 72px; height: 72px; border-radius: 18px; background: linear-gradient(135deg,#4ade80,#059669); color: white; font-weight: bold; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+    h1 { margin: 8px 0 4px; font-size: 26px; }
     .sub { color: #555; margin: 0 0 16px; }
     .btn { display: block; padding: 14px; margin-top: 10px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: bold; font-size: 16px; }
     .wa { background: #25d366; color: white; }
@@ -25,29 +25,67 @@
   </style>
 </head>
 <body>
-  <div class="top"><a href="index.html" style="color:white;text-decoration:none">← Shule.ke</a></div>
-  <main>
-    <div class="hero">
-      <img src="file_000000003ffc8208aa23f4681212d31b.png" alt="Sunrise Academy logo">
-      <h1>Sunrise Academy</h1>
-      <p class="sub">Kapenguria, West Pokot County</p>
-      <a class="btn wa" href="https://wa.me/254718091891?text=Hello%20Sunrise%20Academy%2C%20I%20found%20you%20on%20Shule.ke.%20I%20would%20like%20to%20know%20more%20about%20admissions.">Chat on WhatsApp</a>
-      <a class="btn call" href="tel:+254718091891">Call 0718 091 891</a>
-    </div>
-
-    <div class="box">
-      <h2>About the school</h2>
-      <p>Sunrise Academy has built a good academic reputation over more than 15 years in Kapenguria.</p>
-    </div>
-
-    <div class="box">
-      <h2>School details</h2>
-      <div class="row"><span class="label">Curriculum</span>CBC / CBE</div>
-      <div class="row"><span class="label">Levels</span>ECD to Upper Primary</div>
-      <div class="row"><span class="label">Location</span>Mawingu Road, Makutano, Kapenguria Town, West Pokot County</div>
-      <div class="row"><span class="label">Phone</span>0718 091 891</div>
-    </div>
-  </main>
+  <div class="top"><a href="index.html">&larr; Shule.ke</a></div>
+  <main id="page"><div class="box">Loading...</div></main>
   <footer>Listed on Shule.ke</footer>
+
+  <script>
+    var SUPABASE_URL = "https://amrfjuqhdanzqefaeduj.supabase.co";
+    var SUPABASE_KEY = "sb_publishable_v4v3IgCeSfzF_JWHEgdRGw_N2xagd0l";
+
+    function esc(t) {
+      return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function digits(n) {
+      var d = String(n || "").replace(/\D/g, "");
+      if (d.charAt(0) === "0") d = "254" + d.slice(1);
+      return d;
+    }
+    function row(label, value) {
+      return value ? '<div class="row"><span class="label">' + label + '</span>' + esc(value) + '</div>' : "";
+    }
+
+    var page = document.getElementById("page");
+    var slug = new URLSearchParams(location.search).get("s");
+
+    if (!slug) {
+      page.innerHTML = '<div class="box">No school selected. <a href="index.html">Go back</a></div>';
+    } else {
+      var url = SUPABASE_URL + "/rest/v1/schools?select=name,town,county,curriculum,levels,about,phone,whatsapp" +
+        "&status=eq.approved&slug=eq." + encodeURIComponent(slug) + "&limit=1";
+      fetch(url, { headers: { apikey: SUPABASE_KEY } })
+        .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+        .then(function (list) {
+          if (!list.length) {
+            page.innerHTML = '<div class="box">School not found. <a href="index.html">Go back</a></div>';
+            return;
+          }
+          var s = list[0];
+          document.title = s.name + " | Shule.ke";
+          var where = [s.town, s.county].filter(Boolean).join(", ");
+          var wa = digits(s.whatsapp || s.phone);
+          var tel = digits(s.phone || s.whatsapp);
+          var msg = encodeURIComponent("Hello " + s.name + ", I found you on Shule.ke. I would like to know more about admissions.");
+          var w = String(s.name || "?").trim().split(/\s+/);
+          var ini = ((w[0] || "?")[0] + (w[1] ? w[1][0] : "")).toUpperCase();
+
+          page.innerHTML =
+            '<div class="hero"><div class="badge">' + esc(ini) + '</div>' +
+            '<h1>' + esc(s.name) + '</h1><p class="sub">' + esc(where) + '</p>' +
+            (wa ? '<a class="btn wa" href="https://wa.me/' + wa + '?text=' + msg + '">Chat on WhatsApp</a>' : '') +
+            (tel ? '<a class="btn call" href="tel:+' + tel + '">Call +' + tel + '</a>' : '') +
+            '</div>' +
+            (s.about ? '<div class="box"><h2>About the school</h2><p>' + esc(s.about) + '</p></div>' : '') +
+            '<div class="box"><h2>School details</h2>' +
+            row("Curriculum", s.curriculum) + row("Levels", s.levels) + row("Location", where) +
+            '</div>';
+        })
+        .catch(function () {
+          page.innerHTML = '<div class="box">Could not load this school. Check your connection and refresh.</div>';
+        });
+    }
+  </script>
 </body>
 </html>
