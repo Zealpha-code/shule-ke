@@ -3,46 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Shule.ke - Find a School</title>
+  <title>Sunrise Academy, Kapenguria | Shule.ke</title>
+  <meta name="description" content="Sunrise Academy, Makutano, Kapenguria, West Pokot. CBC/CBE from ECD to upper primary.">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
-    header { background: #16a34a; color: white; padding: 24px 16px; text-align: center; }
-    h1 { margin: 0 0 8px; }
+    .top { background: #16a34a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; }
     main { padding: 16px; max-width: 700px; margin: auto; }
-    input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-    .card { background: white; padding: 16px; margin-top: 12px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-    .card h3 { margin: 0 0 6px; }
-    .tag { display: inline-block; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 13px; }
+    .hero { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .hero img { max-width: 260px; width: 80%; height: auto; }
+    h1 { margin: 12px 0 4px; font-size: 26px; }
+    .sub { color: #555; margin: 0 0 16px; }
+    .btn { display: block; padding: 14px; margin-top: 10px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: bold; font-size: 16px; }
+    .wa { background: #25d366; color: white; }
+    .call { background: #16a34a; color: white; }
+    .box { background: white; border-radius: 12px; padding: 16px; margin-top: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .box h2 { margin: 0 0 10px; font-size: 18px; }
+    .row { padding: 8px 0; border-bottom: 1px solid #eee; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #777; font-size: 13px; display: block; }
+    footer { text-align: center; color: #777; font-size: 13px; padding: 24px 16px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Shule.ke</h1>
-    <p>Find the right school for your child</p>
-  </header>
+  <div class="top">Shule.ke</div>
   <main>
-    <input id="q" placeholder="Search by name or town..." oninput="show()">
-    <div id="list"></div>
-    <p style="color:#777;font-size:13px;margin-top:20px">Sample schools shown for demonstration only.</p>
+    <div class="hero">
+      <img src="logo.png" alt="Sunrise Academy logo">
+      <h1>Sunrise Academy</h1>
+      <p class="sub">Kapenguria, West Pokot County</p>
+      <a class="btn wa" href="https://wa.me/254718091891?text=Hello%20Sunrise%20Academy%2C%20I%20found%20you%20on%20Shule.ke.%20I%20would%20like%20to%20know%20more%20about%20admissions.">Chat on WhatsApp</a>
+      <a class="btn call" href="tel:+254718091891">Call 0718 091 891</a>
+    </div>
+
+    <div class="box">
+      <h2>About the school</h2>
+      <p>Sunrise Academy has built a good academic reputation over more than 15 years in Kapenguria.</p>
+    </div>
+
+    <div class="box">
+      <h2>School details</h2>
+      <div class="row"><span class="label">Curriculum</span>CBC / CBE</div>
+      <div class="row"><span class="label">Levels</span>ECD to Upper Primary</div>
+      <div class="row"><span class="label">Location</span>Mawingu Road, Makutano, Kapenguria Town, West Pokot County</div>
+      <div class="row"><span class="label">Phone</span>0718 091 891</div>
+    </div>
   </main>
-  <script>
-    var schools = [
-      { name: "Sample Primary School", town: "Nairobi", curriculum: "CBC" },
-      { name: "Sample Academy", town: "Kisumu", curriculum: "CBC" },
-      { name: "Sample High School", town: "Mombasa", curriculum: "8-4-4" }
-    ];
-    function show() {
-      var q = document.getElementById("q").value.toLowerCase();
-      var html = "";
-      schools.forEach(function (s) {
-        if ((s.name + " " + s.town).toLowerCase().indexOf(q) > -1) {
-          html += '<div class="card"><h3>' + s.name + '</h3>' + s.town +
-                  ' <span class="tag">' + s.curriculum + '</span></div>';
-        }
-      });
-      document.getElementById("list").innerHTML = html || "<p>No schools found.</p>";
-    }
-    show();
-  </script>
+  <footer>Listed on Shule.ke</footer>
 </body>
 </html>
