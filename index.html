@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shule.ke - Find a School</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
+    header { background: #16a34a; color: white; padding: 24px 16px; text-align: center; }
+    h1 { margin: 0 0 8px; }
+    main { padding: 16px; max-width: 700px; margin: auto; }
+    input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    .card { background: white; padding: 16px; margin-top: 12px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .card h3 { margin: 0 0 6px; }
+    .tag { display: inline-block; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Shule.ke</h1>
+    <p>Find the right school for your child</p>
+  </header>
+  <main>
+    <input id="q" placeholder="Search by name or town..." oninput="show()">
+    <div id="list"></div>
+    <p style="color:#777;font-size:13px;margin-top:20px">Sample schools shown for demonstration only.</p>
+  </main>
+  <script>
+    var schools = [
+      { name: "Sample Primary School", town: "Nairobi", curriculum: "CBC" },
+      { name: "Sample Academy", town: "Kisumu", curriculum: "CBC" },
+      { name: "Sample High School", town: "Mombasa", curriculum: "8-4-4" }
+    ];
+    function show() {
+      var q = document.getElementById("q").value.toLowerCase();
+      var html = "";
+      schools.forEach(function (s) {
+        if ((s.name + " " + s.town).toLowerCase().indexOf(q) > -1) {
+          html += '<div class="card"><h3>' + s.name + '</h3>' + s.town +
+                  ' <span class="tag">' + s.curriculum + '</span></div>';
+        }
+      });
+      document.getElementById("list").innerHTML = html || "<p>No schools found.</p>";
+    }
+    show();
+  </script>
+</body>
+</html>
