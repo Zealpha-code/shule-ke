@@ -13,6 +13,7 @@
     .box { background: white; border-radius: 12px; padding: 18px; margin-top: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
     h1 { font-size: 22px; margin: 6px 0 4px; }
     h2 { font-size: 18px; margin: 0 0 10px; }
+    h3 { font-size: 15px; margin: 18px 0 0; color: #166534; }
     label { display: block; font-size: 14px; color: #555; margin: 12px 0 4px; }
     input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
     textarea { min-height: 90px; }
@@ -49,10 +50,17 @@
       <div id="statusBox"></div>
       <label for="name">School name *</label>
       <input id="name" maxlength="80">
-      <label for="town">Town / area</label>
-      <input id="town" maxlength="60">
-      <label for="county">County</label>
-      <input id="county" maxlength="60">
+
+      <h3>Location in Kenya</h3>
+      <label for="county">County *</label>
+      <select id="county"><option value="">Select county</option></select>
+      <label for="sub_county">Sub-county</label>
+      <input id="sub_county" maxlength="60" placeholder="e.g. Kapenguria">
+      <label for="ward">Ward</label>
+      <input id="ward" maxlength="60">
+      <label for="area">Local area or street</label>
+      <input id="area" maxlength="100" placeholder="e.g. Mawingu Road, Makutano">
+
       <label for="curriculum">Curriculum</label>
       <select id="curriculum">
         <option value="">Select</option>
@@ -86,11 +94,19 @@
     var session = null;
     var school = null;
 
+    var COUNTIES = ["Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa","Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi","Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos","Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a","Nairobi","Nakuru","Nandi","Narok","Nyamira","Nyandarua","Nyeri","Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi","Trans Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot"];
+
     try { session = JSON.parse(localStorage.getItem("shule_session") || "null"); } catch (e) { session = null; }
 
     function $(id) { return document.getElementById(id); }
     function say(id, text, ok) { var e = $(id); e.textContent = text; e.className = "msg " + (ok ? "ok" : "err"); }
     function errText(j) { return (j && (j.msg || j.error_description || j.message || j.hint)) || "Something went wrong. Try again."; }
+
+    COUNTIES.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      $("county").appendChild(o);
+    });
 
     function saveSession(d) {
       session = {
@@ -154,8 +170,9 @@
     }
 
     function fillForm() {
-      var f = ["name", "town", "county", "curriculum", "levels", "about", "phone", "whatsapp"];
+      var f = ["name", "county", "sub_county", "ward", "curriculum", "levels", "about", "phone", "whatsapp"];
       f.forEach(function (k) { $(k).value = school ? (school[k] || "") : ""; });
+      $("area").value = school ? (school.area || school.town || "") : "";
       if (school) {
         $("formTitle").textContent = "Your school";
         $("consentRow").style.display = "none";
@@ -201,15 +218,19 @@
     $("saveBtn").onclick = function () {
       var data = {
         name: $("name").value.trim(),
-        town: $("town").value.trim(),
-        county: $("county").value.trim(),
+        county: $("county").value,
+        sub_county: $("sub_county").value.trim(),
+        ward: $("ward").value.trim(),
+        area: $("area").value.trim(),
         curriculum: $("curriculum").value,
         levels: $("levels").value.trim(),
         about: $("about").value.trim(),
         phone: $("phone").value.trim(),
         whatsapp: $("whatsapp").value.trim()
       };
+      data.town = data.area; // keeps older pages working
       if (!data.name) { say("formMsg", "Enter the school name.", false); return; }
+      if (!data.county) { say("formMsg", "Select the county.", false); return; }
       if (data.phone.replace(/\D/g, "").length < 9) { say("formMsg", "Enter a valid phone number.", false); return; }
       if (!school && !$("consent").checked) { say("formMsg", "Please tick the box to confirm you may list this school.", false); return; }
 
