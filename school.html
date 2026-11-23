@@ -53,7 +53,7 @@
     if (!slug) {
       page.innerHTML = '<div class="box">No school selected. <a href="index.html">Go back</a></div>';
     } else {
-      var url = SUPABASE_URL + "/rest/v1/schools?select=name,town,county,curriculum,levels,about,phone,whatsapp" +
+      var url = SUPABASE_URL + "/rest/v1/schools?select=name,town,county,sub_county,ward,area,curriculum,levels,about,phone,whatsapp" +
         "&status=eq.approved&slug=eq." + encodeURIComponent(slug) + "&limit=1";
       fetch(url, { headers: { apikey: SUPABASE_KEY } })
         .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
@@ -64,7 +64,7 @@
           }
           var s = list[0];
           document.title = s.name + " | Shule.ke";
-          var where = [s.town, s.county].filter(Boolean).join(", ");
+          var where = [s.area || s.town, s.ward, s.sub_county, s.county].filter(Boolean).join(", ");
           var wa = digits(s.whatsapp || s.phone);
           var tel = digits(s.phone || s.whatsapp);
           var msg = encodeURIComponent("Hello " + s.name + ", I found you on Shule.ke. I would like to know more about admissions.");
@@ -79,7 +79,7 @@
             '</div>' +
             (s.about ? '<div class="box"><h2>About the school</h2><p>' + esc(s.about) + '</p></div>' : '') +
             '<div class="box"><h2>School details</h2>' +
-            row("Curriculum", s.curriculum) + row("Levels", s.levels) + row("Location", where) +
+            row("Curriculum", s.curriculum) + row("Levels", s.levels) + row("County", s.county) + row("Sub-county", s.sub_county) + row("Ward", s.ward) + row("Area / street", s.area || s.town) +
             '</div>';
         })
         .catch(function () {
