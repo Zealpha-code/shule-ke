@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>School dashboard | Shule.ke</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
+    .top { background: #16a34a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .top a { color: white; text-decoration: none; }
+    .top button { background: white; color: #16a34a; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: bold; font-size: 14px; }
+    main { padding: 16px; max-width: 700px; margin: auto; }
+    .box { background: white; border-radius: 12px; padding: 18px; margin-top: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    h1 { font-size: 22px; margin: 6px 0 4px; }
+    h2 { font-size: 18px; margin: 0 0 10px; }
+    label { display: block; font-size: 14px; color: #555; margin: 12px 0 4px; }
+    input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+    textarea { min-height: 90px; }
+    .btn { display: block; width: 100%; padding: 14px; margin-top: 14px; border: 0; border-radius: 10px; background: #16a34a; color: white; font-weight: bold; font-size: 16px; }
+    .btn.alt { background: white; color: #16a34a; border: 2px solid #16a34a; }
+    .msg { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; }
+    .msg.ok { display: block; background: #dcfce7; color: #166534; }
+    .msg.err { display: block; background: #fee2e2; color: #991b1b; }
+    .status { padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
+    .pending { background: #fef9c3; color: #854d0e; }
+    .approved { background: #dcfce7; color: #166534; }
+    .rejected { background: #fee2e2; color: #991b1b; }
+    .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 14px; }
+    .check input { width: auto; margin-top: 3px; }
+  </style>
+</head>
+<body>
+  <div class="top"><a href="index.html">&larr; Shule.ke</a><button id="logout" style="display:none">Log out</button></div>
+  <main>
+    <div class="box" id="authBox">
+      <h1>School login</h1>
+      <p style="color:#555;margin:0">Create an account to list your school for free, or log in to edit it.</p>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email">
+      <label for="password">Password (at least 6 characters)</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button class="btn" id="loginBtn">Log in</button>
+      <button class="btn alt" id="signupBtn">Create account</button>
+      <div class="msg" id="authMsg"></div>
+    </div>
+
+    <div class="box" id="formBox" style="display:none">
+      <h2 id="formTitle">Add your school</h2>
+      <div id="statusBox"></div>
+      <label for="name">School name *</label>
+      <input id="name" maxlength="80">
+      <label for="town">Town / area</label>
+      <input id="town" maxlength="60">
+      <label for="county">County</label>
+      <input id="county" maxlength="60">
+      <label for="curriculum">Curriculum</label>
+      <select id="curriculum">
+        <option value="">Select</option>
+        <option>CBC / CBE</option>
+        <option>8-4-4</option>
+        <option>CBC and 8-4-4</option>
+        <option>IGCSE / Cambridge</option>
+        <option>IB</option>
+        <option>Other</option>
+      </select>
+      <label for="levels">Levels (e.g. ECD to Upper Primary)</label>
+      <input id="levels" maxlength="80">
+      <label for="about">About the school</label>
+      <textarea id="about" maxlength="500"></textarea>
+      <label for="phone">Phone number parents can call *</label>
+      <input id="phone" type="tel" maxlength="20" placeholder="0712345678">
+      <label for="whatsapp">WhatsApp number (leave blank to use the phone number)</label>
+      <input id="whatsapp" type="tel" maxlength="20">
+      <div class="check" id="consentRow">
+        <input type="checkbox" id="consent">
+        <label for="consent" style="margin:0;color:#1a1a1a">I am allowed to list this school, and I understand everything I enter here is shown publicly.</label>
+      </div>
+      <button class="btn" id="saveBtn">Save</button>
+      <div class="msg" id="formMsg"></div>
+    </div>
+  </main>
+
+  <script>
+    var U = "https://amrfjuqhdanzqefaeduj.supabase.co";
+    var K = "sb_publishable_v4v3IgCeSfzF_JWHEgdRGw_N2xagd0l";
+    var session = null;
+    var school = null;
+
+    try { session = JSON.parse(localStorage.getItem("shule_session") || "null"); } catch (e) { session = null; }
+
+    function $(id) { return document.getElementById(id); }
+    function say(id, text, ok) { var e = $(id); e.textContent = text; e.className = "msg " + (ok ? "ok" : "err"); }
+    function errText(j) { return (j && (j.msg || j.error_description || j.message || j.hint)) || "Something went wrong. Try again."; }
+
+    function saveSession(d) {
+      session = {
+        access_token: d.access_token,
+        refresh_token: d.refresh_token,
+        user_id: d.user && d.user.id,
+        expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 3600)
+      };
+      localStorage.setItem("shule_session", JSON.stringify(session));
+    }
+    function clearSession() { session = null; localStorage.removeItem("shule_session"); }
+
+    function authCall(path, body) {
+      return fetch(U + "/auth/v1/" + path, {
+        method: "POST",
+        headers: { apikey: K, "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+    }
+
+    function freshToken() {
+      if (!session) return Promise.reject(new Error("no session"));
+      if (session.expires_at - Math.floor(Date.now() / 1000) > 60) return Promise.resolve(session.access_token);
+      return authCall("token?grant_type=refresh_token", { refresh_token: session.refresh_token }).then(function (res) {
+        if (!res.ok) { clearSession(); throw new Error("expired"); }
+        saveSession(res.j);
+        return session.access_token;
+      });
+    }
+
+    function rest(method, path, body) {
+      return freshToken().then(function (token) {
+        return fetch(U + "/rest/v1/" + path, {
+          method: method,
+          headers: {
+            apikey: K,
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json",
+            Prefer: "return=representation"
+          },
+          body: body ? JSON.stringify(body) : undefined
+        });
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+    }
+
+    function showAuth() {
+      $("authBox").style.display = "block";
+      $("formBox").style.display = "none";
+      $("logout").style.display = "none";
+    }
+
+    function showForm() {
+      $("authBox").style.display = "none";
+      $("formBox").style.display = "block";
+      $("logout").style.display = "inline-block";
+      rest("GET", "schools?select=*&owner_id=eq." + session.user_id).then(function (res) {
+        if (!res.ok) { say("formMsg", errText(res.j), false); return; }
+        school = res.j[0] || null;
+        fillForm();
+      }).catch(function () { clearSession(); showAuth(); });
+    }
+
+    function fillForm() {
+      var f = ["name", "town", "county", "curriculum", "levels", "about", "phone", "whatsapp"];
+      f.forEach(function (k) { $(k).value = school ? (school[k] || "") : ""; });
+      if (school) {
+        $("formTitle").textContent = "Your school";
+        $("consentRow").style.display = "none";
+        var st = school.status;
+        var text = st === "approved" ? "Approved: your school is live on Shule.ke."
+                 : st === "rejected" ? "Not approved. Contact Shule.ke for help."
+                 : "Pending: we will approve your page soon. It is not public yet.";
+        var link = st === "approved" ? ' <a href="school.html?s=' + encodeURIComponent(school.slug) + '">View page</a>' : "";
+        $("statusBox").innerHTML = '<div class="status ' + st + '">' + text + link + '</div>';
+      } else {
+        $("formTitle").textContent = "Add your school";
+        $("consentRow").style.display = "flex";
+        $("statusBox").innerHTML = "";
+      }
+    }
+
+    function slugify(name) {
+      var base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "school";
+      return base + "-" + Math.random().toString(36).slice(2, 6);
+    }
+
+    $("loginBtn").onclick = function () {
+      var email = $("email").value.trim(), pw = $("password").value;
+      if (!email || !pw) { say("authMsg", "Enter your email and password.", false); return; }
+      authCall("token?grant_type=password", { email: email, password: pw }).then(function (res) {
+        if (!res.ok) { say("authMsg", errText(res.j), false); return; }
+        saveSession(res.j); showForm();
+      }).catch(function () { say("authMsg", "No connection. Try again.", false); });
+    };
+
+    $("signupBtn").onclick = function () {
+      var email = $("email").value.trim(), pw = $("password").value;
+      if (!email || pw.length < 6) { say("authMsg", "Enter your email and a password of at least 6 characters.", false); return; }
+      authCall("signup", { email: email, password: pw }).then(function (res) {
+        if (!res.ok) { say("authMsg", errText(res.j), false); return; }
+        if (res.j.access_token) { saveSession(res.j); showForm(); }
+        else say("authMsg", "Account created. Check your email to confirm, then log in.", true);
+      }).catch(function () { say("authMsg", "No connection. Try again.", false); });
+    };
+
+    $("logout").onclick = function () { clearSession(); school = null; showAuth(); };
+
+    $("saveBtn").onclick = function () {
+      var data = {
+        name: $("name").value.trim(),
+        town: $("town").value.trim(),
+        county: $("county").value.trim(),
+        curriculum: $("curriculum").value,
+        levels: $("levels").value.trim(),
+        about: $("about").value.trim(),
+        phone: $("phone").value.trim(),
+        whatsapp: $("whatsapp").value.trim()
+      };
+      if (!data.name) { say("formMsg", "Enter the school name.", false); return; }
+      if (data.phone.replace(/\D/g, "").length < 9) { say("formMsg", "Enter a valid phone number.", false); return; }
+      if (!school && !$("consent").checked) { say("formMsg", "Please tick the box to confirm you may list this school.", false); return; }
+
+      var req;
+      if (school) {
+        req = rest("PATCH", "schools?id=eq." + school.id, data);
+      } else {
+        data.owner_id = session.user_id;
+        data.slug = slugify(data.name);
+        req = rest("POST", "schools", data);
+      }
+      req.then(function (res) {
+        if (!res.ok) { say("formMsg", errText(res.j), false); return; }
+        school = res.j[0] || school;
+        fillForm();
+        say("formMsg", "Saved.", true);
+      }).catch(function () { say("formMsg", "Could not save. Check your connection.", false); });
+    };
+
+    if (session) showForm(); else showAuth();
+  </script>
+</body>
+</html>
