@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Shule.ke - Find a School in Kenya</title>
-  <meta name="description" content="Find schools near you in Kenya, with direct WhatsApp contact.">
+  <meta name="description" content="Find schools near you in Kenya by county, sub-county, ward or area, with direct WhatsApp contact.">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f6faf7; color: #1a1a1a; }
     .top { background: #16a34a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; }
@@ -12,10 +12,15 @@
     .hero { padding: 28px 16px 8px; text-align: center; }
     .hero h1 { margin: 0 0 8px; font-size: 26px; }
     .hero p { margin: 0; color: #555; }
-    h2 { margin: 24px 16px 10px; font-size: 19px; }
+    .filters { background: white; margin: 16px; padding: 14px; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+    .filters input, .filters select { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; background: white; }
+    .filters select { margin-top: 10px; }
+    .clear { display: none; margin-top: 10px; background: none; border: 0; color: #16a34a; font-weight: bold; font-size: 15px; padding: 4px 0; }
+    h2 { margin: 20px 16px 10px; font-size: 19px; }
     .slider { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 16px 16px; scrollbar-width: none; }
     .slider::-webkit-scrollbar { display: none; }
     .slide { flex: 0 0 78%; scroll-snap-align: start; background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.12); text-decoration: none; color: inherit; box-sizing: border-box; display: block; }
+    .list .slide { margin: 0 16px 12px; }
     .badge { width: 56px; height: 56px; border-radius: 14px; color: white; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
     .slide h3 { margin: 0 0 4px; font-size: 18px; }
     .town { color: #666; font-size: 14px; margin-bottom: 10px; }
@@ -24,6 +29,9 @@
     .invite { background: #ecfdf5; border: 2px dashed #86efac; box-shadow: none; }
     .invite .badge { background: #bbf7d0; color: #166534; }
     .note { text-align: center; color: #777; font-size: 13px; padding: 8px 16px 28px; }
+    .empty { margin: 0 16px 12px; padding: 18px; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .empty h3 { margin: 0 0 6px; font-size: 18px; }
+    .empty p { margin: 0; color: #555; font-size: 15px; }
   </style>
 </head>
 <body>
@@ -32,22 +40,34 @@
   <div class="wrap">
     <div class="hero">
       <h1>Find the right school for your child</h1>
-      <p>Schools across Kenya, with direct contact to each one.</p>
+      <p>Search by county, sub-county, ward or area.</p>
     </div>
 
-    <h2>Featured schools</h2>
-    <div class="slider" id="slider">
-      <div class="slide"><h3>Loading schools...</h3></div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search school, ward, area or town...">
+      <select id="county"><option value="">All counties</option></select>
+      <button class="clear" id="clear">Clear search</button>
     </div>
-    <p class="note">More schools are being added. Swipe to see all.</p>
+
+    <div id="featuredBox">
+      <h2>Featured schools</h2>
+      <div class="slider" id="slider">
+        <div class="slide"><h3>Loading schools...</h3></div>
+      </div>
+      <p class="note">More schools are being added. Swipe to see all.</p>
+    </div>
+
+    <div id="resultsBox" style="display:none">
+      <h2 id="resultsTitle"></h2>
+      <div class="list" id="results"></div>
+    </div>
   </div>
 
   <script>
     var SUPABASE_URL = "https://amrfjuqhdanzqefaeduj.supabase.co";
     var SUPABASE_KEY = "sb_publishable_v4v3IgCeSfzF_JWHEgdRGw_N2xagd0l";
 
-    // PUT YOUR WhatsApp number here, format 2547XXXXXXXX (no + or spaces)
-    var JOIN_NUMBER = "2547XXXXXXXX";
+    var COUNTIES = ["Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa","Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi","Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos","Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a","Nairobi","Nakuru","Nandi","Narok","Nyamira","Nyandarua","Nyeri","Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi","Trans Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot"];
 
     var COLORS = [
       "linear-gradient(135deg,#4ade80,#059669)",
@@ -57,6 +77,10 @@
       "linear-gradient(135deg,#2dd4bf,#0891b2)"
     ];
 
+    var all = [];
+    var filtering = false;
+
+    function $(id) { return document.getElementById(id); }
     function esc(t) {
       return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) {
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -71,40 +95,88 @@
       return "school.html?s=" + encodeURIComponent(s.slug);
     }
 
-    var slider = document.getElementById("slider");
+    COUNTIES.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      $("county").appendChild(o);
+    });
 
-    function render(schools) {
-      var html = "";
-      schools.forEach(function (s, i) {
-        var where = [s.area || s.town, s.sub_county, s.county].filter(Boolean).join(", ");
-        html += '<a class="slide" href="' + linkFor(s) + '">' +
-          '<div class="badge" style="background:' + COLORS[i % COLORS.length] + '">' + esc(initials(s.name)) + '</div>' +
-          '<h3>' + esc(s.name) + '</h3>' +
-          '<div class="town">' + esc(where) + '</div>' +
-          (s.curriculum ? '<span class="tag">' + esc(s.curriculum) + '</span>' : '') +
-          (s.levels ? '<span class="tag">' + esc(s.levels) + '</span>' : '') +
-          '<div class="view">View school &rarr;</div></a>';
-      });
-      var msg = encodeURIComponent("Hello Shule.ke, I would like my school to be listed.");
-      html += '<a class="slide invite" href="https://wa.me/' + JOIN_NUMBER + '?text=' + msg + '">' +
+    function cardHtml(s, i) {
+      var where = [s.area || s.town, s.sub_county, s.county].filter(Boolean).join(", ");
+      return '<a class="slide" href="' + linkFor(s) + '">' +
+        '<div class="badge" style="background:' + COLORS[i % COLORS.length] + '">' + esc(initials(s.name)) + '</div>' +
+        '<h3>' + esc(s.name) + '</h3>' +
+        '<div class="town">' + esc(where) + '</div>' +
+        (s.curriculum ? '<span class="tag">' + esc(s.curriculum) + '</span>' : '') +
+        (s.levels ? '<span class="tag">' + esc(s.levels) + '</span>' : '') +
+        '<div class="view">View school &rarr;</div></a>';
+    }
+
+    function inviteHtml() {
+      return '<a class="slide invite" href="dashboard.html">' +
         '<div class="badge">+</div><h3>Your school here</h3>' +
         '<div class="town">Get a free page and let parents reach you on WhatsApp.</div>' +
-        '<div class="view">Message us to get listed &rarr;</div></a>';
-      slider.innerHTML = html;
+        '<div class="view">List your school free &rarr;</div></a>';
     }
+
+    function renderFeatured() {
+      var html = "";
+      all.forEach(function (s, i) { html += cardHtml(s, i); });
+      $("slider").innerHTML = html + inviteHtml();
+    }
+
+    function haystack(s) {
+      return [s.name, s.area, s.town, s.ward, s.sub_county, s.county].join(" ").toLowerCase();
+    }
+
+    function apply() {
+      var q = $("q").value.trim().toLowerCase();
+      var c = $("county").value;
+      filtering = !!(q || c);
+      $("clear").style.display = filtering ? "block" : "none";
+      $("featuredBox").style.display = filtering ? "none" : "block";
+      $("resultsBox").style.display = filtering ? "block" : "none";
+      if (!filtering) return;
+
+      var words = q.split(/\s+/).filter(Boolean);
+      var found = all.filter(function (s) {
+        if (c && String(s.county || "").toLowerCase() !== c.toLowerCase()) return false;
+        var h = haystack(s);
+        return words.every(function (w) { return h.indexOf(w) > -1; });
+      });
+
+      $("resultsTitle").textContent = found.length + (found.length === 1 ? " school" : " schools") + (c ? " in " + c : "") + " found";
+
+      if (!found.length) {
+        $("results").innerHTML =
+          '<div class="empty"><h3>No schools found yet</h3>' +
+          '<p>Try a different spelling or another county. Schools are joining every week.</p></div>' + inviteHtml();
+      } else {
+        var html = "";
+        found.forEach(function (s, i) { html += cardHtml(s, i); });
+        $("results").innerHTML = html + inviteHtml();
+      }
+    }
+
+    $("q").addEventListener("input", apply);
+    $("county").addEventListener("change", apply);
+    $("clear").addEventListener("click", function () {
+      $("q").value = ""; $("county").value = ""; apply();
+    });
 
     fetch(SUPABASE_URL + "/rest/v1/schools?select=id,slug,name,town,county,sub_county,ward,area,curriculum,levels&status=eq.approved&order=created_at.asc",
       { headers: { apikey: SUPABASE_KEY } })
       .then(function (r) { if (!r.ok) throw new Error("bad response"); return r.json(); })
-      .then(render)
+      .then(function (list) { all = list; renderFeatured(); apply(); })
       .catch(function () {
-        slider.innerHTML = '<div class="slide"><h3>Could not load schools</h3><div class="town">Check your internet connection and refresh.</div></div>';
+        $("slider").innerHTML = '<div class="slide"><h3>Could not load schools</h3><div class="town">Check your internet connection and refresh.</div></div>';
       });
 
-    // Auto-slide to the next card, back to the first at the end. Pauses while touching.
+    // Auto-slide featured cards. Pauses while touching or while a search is active.
+    var slider = $("slider");
     var paused = false, resumeTimer;
     function step() {
-      if (paused) return;
+      if (paused || filtering) return;
       var cards = slider.children;
       if (cards.length < 2) return;
       var start = cards[0].offsetLeft, current = 0, best = 1e9;
