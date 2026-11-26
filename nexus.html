@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Nexus | Shule.ke Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f1f5f9; color: #0f172a; }
+    .top { background: #0f172a; color: white; padding: 14px 16px; font-weight: bold; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .top small { color: #4ade80; font-weight: normal; font-size: 13px; margin-left: 8px; }
+    .top button { background: #4ade80; color: #0f172a; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: bold; font-size: 14px; }
+    main { padding: 14px; max-width: 760px; margin: auto; }
+    .box { background: white; border-radius: 12px; padding: 16px; margin-top: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    h1 { font-size: 22px; margin: 4px 0; }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    h3 { font-size: 15px; margin: 16px 0 0; color: #166534; }
+    label { display: block; font-size: 14px; color: #475569; margin: 12px 0 4px; }
+    input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: inherit; background: white; }
+    textarea { min-height: 90px; }
+    .btn { display: block; width: 100%; padding: 13px; margin-top: 12px; border: 0; border-radius: 10px; background: #16a34a; color: white; font-weight: bold; font-size: 16px; }
+    .btn.alt { background: white; color: #0f172a; border: 2px solid #cbd5e1; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+    .stat { background: white; border-radius: 12px; padding: 10px 4px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .stat b { display: block; font-size: 22px; }
+    .stat span { font-size: 12px; color: #64748b; }
+    .item { background: white; border-radius: 12px; padding: 14px; margin-top: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .row1 strong { font-size: 17px; }
+    .pill { font-size: 12px; font-weight: bold; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .pending { background: #fef9c3; color: #854d0e; }
+    .approved { background: #dcfce7; color: #166534; }
+    .rejected { background: #fee2e2; color: #991b1b; }
+    .loc, .ph { color: #475569; font-size: 14px; margin-top: 4px; }
+    .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .acts button, .acts a { padding: 8px 12px; border-radius: 8px; border: 2px solid #cbd5e1; background: white; font-size: 14px; font-weight: bold; text-decoration: none; color: #0f172a; }
+    .acts .ok { background: #16a34a; border-color: #16a34a; color: white; }
+    .acts .no { color: #b45309; border-color: #fcd34d; }
+    .acts .del { color: #b91c1c; border-color: #fca5a5; }
+    .msg { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; }
+    .msg.ok { display: block; background: #dcfce7; color: #166534; }
+    .msg.err { display: block; background: #fee2e2; color: #991b1b; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 10px 16px; border-radius: 10px; font-size: 14px; display: none; z-index: 9; }
+  </style>
+</head>
+<body>
+  <div class="top"><span>Nexus<small>Shule.ke admin</small></span><button id="logout" hidden>Log out</button></div>
+  <main>
+    <div class="box" id="loginBox">
+      <h1>Admin login</h1>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button class="btn" id="loginBtn">Log in</button>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+
+    <div id="app" hidden>
+      <div class="stats" id="stats"></div>
+      <button class="btn" id="addBtn">+ Add school</button>
+      <div class="box">
+        <input id="q" type="search" placeholder="Search name, county, ward, area...">
+        <div style="height:8px"></div>
+        <select id="filter">
+          <option value="all">All schools</option>
+          <option value="pending">Pending approval</option>
+          <option value="approved">Approved (live)</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="box" id="formBox" hidden>
+      <h2 id="formTitle">Add school</h2>
+      <label for="name">School name *</label>
+      <input id="name" maxlength="80">
+
+      <h3>Location in Kenya</h3>
+      <label for="county">County *</label>
+      <select id="county"><option value="">Select county</option></select>
+      <label for="sub_county">Sub-county</label>
+      <input id="sub_county" maxlength="60">
+      <label for="ward">Ward</label>
+      <input id="ward" maxlength="60">
+      <label for="area">Local area or street</label>
+      <input id="area" maxlength="100">
+
+      <h3>School details</h3>
+      <label for="curriculum">Curriculum</label>
+      <select id="curriculum">
+        <option value="">Select</option>
+        <option>CBC / CBE</option>
+        <option>8-4-4</option>
+        <option>CBC and 8-4-4</option>
+        <option>IGCSE / Cambridge</option>
+        <option>IB</option>
+        <option>Other</option>
+      </select>
+      <label for="levels">Levels (e.g. ECD to Upper Primary)</label>
+      <input id="levels" maxlength="80">
+      <label for="about">About the school</label>
+      <textarea id="about" maxlength="500"></textarea>
+      <div class="two">
+        <div><label for="phone">Phone *</label><input id="phone" type="tel" maxlength="20"></div>
+        <div><label for="whatsapp">WhatsApp (optional)</label><input id="whatsapp" type="tel" maxlength="20"></div>
+      </div>
+      <label for="status">Status</label>
+      <select id="status">
+        <option value="approved">Approved (live on the site)</option>
+        <option value="pending">Pending (hidden)</option>
+        <option value="rejected">Rejected (hidden)</option>
+      </select>
+      <button class="btn" id="saveBtn">Save school</button>
+      <button class="btn alt" id="cancelBtn">Cancel</button>
+      <div class="msg" id="formMsg"></div>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var U = "https://amrfjuqhdanzqefaeduj.supabase.co";
+    var K = "sb_publishable_v4v3IgCeSfzF_JWHEgdRGw_N2xagd0l";
+    var KEY = "nexus_session";
+    var COUNTIES = ["Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa","Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi","Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos","Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a","Nairobi","Nakuru","Nandi","Narok","Nyamira","Nyandarua","Nyeri","Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi","Trans Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot"];
+    var FIELDS = ["name","county","sub_county","ward","area","curriculum","levels","about","phone","whatsapp","status"];
+
+    var session = null, schools = [], editing = null;
+    try { session = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { session = null; }
+
+    function $(id) { return document.getElementById(id); }
+    function esc(t) {
+      return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function say(id, text, ok) { var e = $(id); e.textContent = text; e.className = "msg " + (ok ? "ok" : "err"); }
+    function toast(t) { var e = $("toast"); e.textContent = t; e.style.display = "block"; setTimeout(function () { e.style.display = "none"; }, 2500); }
+    function errText(j) { return (j && (j.msg || j.error_description || j.message || j.hint)) || "Something went wrong. Try again."; }
+
+    COUNTIES.forEach(function (c) {
+      var o = document.createElement("option"); o.value = c; o.textContent = c; $("county").appendChild(o);
+    });
+
+    function saveSession(d) {
+      session = { access_token: d.access_token, refresh_token: d.refresh_token, user_id: d.user && d.user.id,
+        expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 3600) };
+      localStorage.setItem(KEY, JSON.stringify(session));
+    }
+    function clearSession() { session = null; localStorage.removeItem(KEY); }
+
+    function authCall(path, body) {
+      return fetch(U + "/auth/v1/" + path, { method: "POST", headers: { apikey: K, "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+    }
+    function freshToken() {
+      if (!session) return Promise.reject(new Error("no session"));
+      if (session.expires_at - Math.floor(Date.now() / 1000) > 60) return Promise.resolve(session.access_token);
+      return authCall("token?grant_type=refresh_token", { refresh_token: session.refresh_token }).then(function (res) {
+        if (!res.ok) { clearSession(); throw new Error("expired"); }
+        saveSession(res.j); return session.access_token;
+      });
+    }
+    function rest(method, path, body, prefer) {
+      return freshToken().then(function (token) {
+        var h = { apikey: K, Authorization: "Bearer " + token, "Content-Type": "application/json" };
+        if (prefer !== false) h.Prefer = prefer || "return=representation";
+        return fetch(U + "/rest/v1/" + path, { method: method, headers: h, body: body ? JSON.stringify(body) : undefined });
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {}
+          return { ok: r.ok, status: r.status, j: j };
+        });
+      });
+    }
+
+    function show(which) {
+      $("loginBox").hidden = which !== "login";
+      $("app").hidden = which !== "app";
+      $("formBox").hidden = which !== "form";
+      $("logout").hidden = which === "login";
+    }
+
+    function boot() {
+      rest("POST", "rpc/is_admin", {}, false).then(function (res) {
+        if (res.ok && res.j === true) { loadSchools(); }
+        else { clearSession(); show("login"); say("loginMsg", "This account is not an admin.", false); }
+      }).catch(function () { clearSession(); show("login"); });
+    }
+
+    function loadSchools() {
+      rest("GET", "schools?select=*&order=created_at.desc").then(function (res) {
+        if (!res.ok) { toast(errText(res.j)); return; }
+        schools = res.j || [];
+        show("app"); render();
+      });
+    }
+
+    function where(s) { return [s.area || s.town, s.ward, s.sub_county, s.county].filter(Boolean).join(", "); }
+    function viewLink(s) { return s.slug === "sunrise-academy" ? "sunrise-academy.html" : "school.html?s=" + encodeURIComponent(s.slug); }
+
+    function render() {
+      var n = { pending: 0, approved: 0, rejected: 0 };
+      schools.forEach(function (s) { if (n[s.status] != null) n[s.status]++; });
+      $("stats").innerHTML =
+        '<div class="stat"><b>' + schools.length + '</b><span>Total</span></div>' +
+        '<div class="stat"><b>' + n.pending + '</b><span>Pending</span></div>' +
+        '<div class="stat"><b>' + n.approved + '</b><span>Live</span></div>' +
+        '<div class="stat"><b>' + n.rejected + '</b><span>Rejected</span></div>';
+
+      var q = $("q").value.trim().toLowerCase(), f = $("filter").value;
+      var shown = schools.filter(function (s) {
+        if (f !== "all" && s.status !== f) return false;
+        var h = [s.name, s.county, s.sub_county, s.ward, s.area, s.town, s.phone].join(" ").toLowerCase();
+        return q.split(/\s+/).filter(Boolean).every(function (w) { return h.indexOf(w) > -1; });
+      });
+
+      if (!shown.length) { $("list").innerHTML = '<div class="box">No schools match.</div>'; return; }
+
+      $("list").innerHTML = shown.map(function (s) {
+        var acts = "";
+        if (s.status !== "approved") acts += '<button class="ok" data-act="approved" data-id="' + esc(s.id) + '">Approve</button>';
+        if (s.status === "approved") acts += '<button class="no" data-act="pending" data-id="' + esc(s.id) + '">Unpublish</button>';
+        if (s.status !== "rejected") acts += '<button class="no" data-act="rejected" data-id="' + esc(s.id) + '">Reject</button>';
+        acts += '<button data-act="edit" data-id="' + esc(s.id) + '">Edit</button>';
+        if (s.status === "approved") acts += '<a href="' + esc(viewLink(s)) + '" target="_blank">View</a>';
+        acts += '<button class="del" data-act="delete" data-id="' + esc(s.id) + '">Delete</button>';
+        return '<div class="item"><div class="row1"><strong>' + esc(s.name) + '</strong>' +
+          '<span class="pill ' + esc(s.status) + '">' + esc(s.status) + '</span></div>' +
+          '<div class="loc">' + esc(where(s)) + '</div>' +
+          '<div class="ph">' + esc(s.phone || "") + (s.owner_id ? "" : " &middot; added by admin") + '</div>' +
+          '<div class="acts">' + acts + '</div></div>';
+      }).join("");
+    }
+
+    function find(id) { return schools.filter(function (s) { return s.id === id; })[0]; }
+
+    $("list").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-act]");
+      if (!b) return;
+      var act = b.getAttribute("data-act"), id = b.getAttribute("data-id"), s = find(id);
+      if (!s) return;
+      if (act === "edit") return openForm(s);
+      if (act === "delete") {
+        if (!confirm("Delete " + s.name + " permanently? This cannot be undone.")) return;
+        rest("DELETE", "schools?id=eq." + id, null, "return=minimal").then(function (res) {
+          if (!res.ok) { toast(errText(res.j)); return; }
+          schools = schools.filter(function (x) { return x.id !== id; });
+          render(); toast("Deleted");
+        });
+        return;
+      }
+      rest("PATCH", "schools?id=eq." + id, { status: act }).then(function (res) {
+        if (!res.ok) { toast(errText(res.j)); return; }
+        s.status = act; render();
+        toast(act === "approved" ? "Approved: now live" : act === "rejected" ? "Rejected" : "Unpublished");
+      });
+    });
+
+    function openForm(s) {
+      editing = s || null;
+      $("formTitle").textContent = s ? "Edit school" : "Add school";
+      FIELDS.forEach(function (k) { $(k).value = s ? (s[k] || "") : ""; });
+      if (s) $("area").value = s.area || s.town || "";
+      if (!s) $("status").value = "approved";
+      $("formMsg").className = "msg";
+      show("form"); window.scrollTo(0, 0);
+    }
+
+    function slugBase(name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "school"; }
+
+    function create(data, tries) {
+      data.slug = tries ? slugBase(data.name) + "-" + Math.random().toString(36).slice(2, 6) : slugBase(data.name);
+      return rest("POST", "schools", data).then(function (res) {
+        if (res.status === 409 && tries < 3) return create(data, tries + 1);
+        return res;
+      });
+    }
+
+    $("saveBtn").onclick = function () {
+      var data = {};
+      FIELDS.forEach(function (k) { data[k] = $(k).value.trim ? $(k).value.trim() : $(k).value; });
+      data.town = data.area;
+      if (!data.name) { say("formMsg", "Enter the school name.", false); return; }
+      if (!data.county) { say("formMsg", "Select the county.", false); return; }
+      if (data.phone.replace(/\D/g, "").length < 9) { say("formMsg", "Enter a valid phone number.", false); return; }
+
+      var req = editing ? rest("PATCH", "schools?id=eq." + editing.id, data) : create(data, 0);
+      req.then(function (res) {
+        if (!res.ok) { say("formMsg", errText(res.j), false); return; }
+        toast(editing ? "School updated" : "School added");
+        loadSchools();
+      }).catch(function () { say("formMsg", "Could not save. Check your connection.", false); });
+    };
+
+    $("addBtn").onclick = function () { openForm(null); };
+    $("cancelBtn").onclick = function () { show("app"); };
+    $("q").addEventListener("input", render);
+    $("filter").addEventListener("change", render);
+    $("logout").onclick = function () { clearSession(); schools = []; show("login"); };
+
+    $("loginBtn").onclick = function () {
+      var email = $("email").value.trim(), pw = $("password").value;
+      if (!email || !pw) { say("loginMsg", "Enter your email and password.", false); return; }
+      authCall("token?grant_type=password", { email: email, password: pw }).then(function (res) {
+        if (!res.ok) { say("loginMsg", errText(res.j), false); return; }
+        saveSession(res.j); boot();
+      }).catch(function () { say("loginMsg", "No connection. Try again.", false); });
+    };
+
+    if (session) boot(); else show("login");
+  </script>
+</body>
+</html>
