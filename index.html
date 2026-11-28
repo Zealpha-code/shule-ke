@@ -16,6 +16,7 @@
     .filters input, .filters select { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; background: white; }
     .filters select { margin-top: 10px; }
     .filters select:disabled { background: #f1f5f9; color: #94a3b8; }
+    .hint { display: none; margin-top: 10px; padding: 9px 12px; background: #fefce8; color: #854d0e; border-radius: 8px; font-size: 14px; }
     .clear { display: none; margin-top: 10px; background: none; border: 0; color: #16a34a; font-weight: bold; font-size: 15px; padding: 4px 0; }
     h2 { margin: 20px 16px 10px; font-size: 19px; }
     .slider { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 16px 16px; scrollbar-width: none; }
@@ -49,6 +50,7 @@
       <select id="county"><option value="">All counties</option></select>
       <select id="subcounty" disabled><option value="">Choose a county first</option></select>
       <select id="ward" disabled><option value="">Choose a sub-county first</option></select>
+      <div class="hint" id="hint"></div>
       <button class="clear" id="clear">Clear search</button>
     </div>
 
@@ -105,11 +107,34 @@
       return s === s.toLowerCase() ? s.replace(/(^|[\s-])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }) : s;
     }
 
-    COUNTIES.forEach(function (c) {
-      var o = document.createElement("option");
-      o.value = c; o.textContent = c;
-      $("county").appendChild(o);
-    });
+    function setHint(text) {
+      var h = $("hint");
+      h.textContent = text || "";
+      h.style.display = text ? "block" : "none";
+    }
+
+    // Counties with schools first (with counts), the rest grouped below
+    function buildCounties() {
+      var sel = $("county");
+      var keep = sel.value;
+      var counts = {};
+      all.forEach(function (s) { var k = norm(s.county); if (k) counts[k] = (counts[k] || 0) + 1; });
+      sel.innerHTML = '<option value="">All counties</option>';
+      var withSchools = document.createElement("optgroup");
+      withSchools.label = "Counties with schools";
+      var without = document.createElement("optgroup");
+      without.label = "Other counties (no schools yet)";
+      COUNTIES.forEach(function (c) {
+        var n = counts[norm(c)] || 0;
+        var o = document.createElement("option");
+        o.value = c;
+        o.textContent = n ? c + " (" + n + ")" : c;
+        (n ? withSchools : without).appendChild(o);
+      });
+      if (withSchools.children.length) sel.appendChild(withSchools);
+      if (without.children.length) sel.appendChild(without);
+      sel.value = keep;
+    }
 
     function collect(list, field) {
       var map = {};
@@ -218,20 +243,29 @@
 
     $("county").addEventListener("change", function () {
       var c = $("county").value;
-      if (!c) { resetSub(); }
-      else {
-        fillSelect($("subcounty"), collect(inCounty(c), "sub_county"), "All sub-counties", "No sub-counties listed yet");
+      if (!c) {
+        resetSub(); setHint("");
+      } else {
+        var list = inCounty(c);
+        var subs = collect(list, "sub_county");
+        fillSelect($("subcounty"), subs, "All sub-counties", "No sub-counties listed yet");
         resetWard();
+        if (!list.length) setHint("No schools in " + c + " yet. Be the first to list yours.");
+        else if (!subs.length) setHint((list.length === 1 ? "1 school" : list.length + " schools") + " in " + c + ", but no sub-county details have been added yet.");
+        else setHint("");
       }
       apply();
     });
 
     $("subcounty").addEventListener("change", function () {
       var c = $("county").value, sc = $("subcounty").value;
-      if (!sc) { resetWard(); }
-      else {
+      if (!sc) {
+        resetWard(); setHint("");
+      } else {
         var list = inCounty(c).filter(function (s) { return norm(s.sub_county) === sc; });
-        fillSelect($("ward"), collect(list, "ward"), "All wards", "No wards listed yet");
+        var wards = collect(list, "ward");
+        fillSelect($("ward"), wards, "All wards", "No wards listed yet");
+        setHint(wards.length ? "" : "No ward details have been added for this sub-county yet.");
       }
       apply();
     });
@@ -240,14 +274,14 @@
 
     $("clear").addEventListener("click", function () {
       $("q").value = ""; $("county").value = "";
-      resetSub();
+      resetSub(); setHint("");
       apply();
     });
 
     fetch(SUPABASE_URL + "/rest/v1/schools?select=id,slug,name,town,county,sub_county,ward,area,curriculum,levels&status=eq.approved&order=created_at.asc",
       { headers: { apikey: SUPABASE_KEY } })
       .then(function (r) { if (!r.ok) throw new Error("bad response"); return r.json(); })
-      .then(function (list) { all = list; renderFeatured(); apply(); })
+      .then(function (list) { all = list; buildCounties(); renderFeatured(); apply(); })
       .catch(function () {
         $("slider").innerHTML = '<div class="slide"><h3>Could not load schools</h3><div class="town">Check your internet connection and refresh.</div></div>';
       });
